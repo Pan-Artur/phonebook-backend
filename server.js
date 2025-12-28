@@ -1,0 +1,217 @@
+const express = require("express");
+const { Pool } = require("pg");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const cors = require("cors");
+require("dotenv").config();
+
+const app = express();
+
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
+app.use(express.json());
+
+const pool = new Pool({
+  host: 'localhost',
+  port: 5432,
+  database: 'phonebook',
+  user: 'phonebook_user',
+  password: 'password123',
+  ssl: false,
+  connectionTimeoutMillis: 10000,
+});
+
+async function createTables() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password VARCHAR(250) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )  
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contacts (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        number VARCHAR(20) NOT NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )  
+    `);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+const auth = async (req, res, next) => {
+  try {
+    const token = req.header("Authorization")?.replace("Bearer ", "");
+    if (!token) throw new Error();
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const result = await pool.query(
+      "SELECT id, name, email FROM users WHERE id = $1",
+      [decoded.userId]
+    );
+
+    if (result.rows.length === 0) throw new Error();
+
+    req.user = result.rows[0];
+    next();
+  } catch (error) {
+    res.status(401).json({ message: "Not authorized!" });
+  }
+};
+
+app.post("/users/signup", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const userExists = await pool.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email]
+    );
+
+    if (userExists.rows.length > 0) {
+      return res.status(409).json({ message: "Email already exists!" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const result = await pool.query(
+      "INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email",
+      [name, email, hashedPassword]
+    );
+
+    const user = result.rows[0];
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.status(201).json({
+      user: {
+        name: user.name,
+        email: user.email,
+      },
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post("/users/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const result = await pool.query(
+      "SELECT id, name, email, password FROM users WHERE email = $1",
+      [email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: "Invalid credentials!" });
+    }
+
+    const user = result.rows[0];
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid credentials!" });
+    }
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      user: {
+        name: user.name,
+        email: user.email,
+      },
+      token,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get("/contacts", auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, name, number FROM contacts WHERE user_id = $1 ORDER BY created_at DESC",
+      [req.user.id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post("/contacts", auth, async (req, res) => {
+  try {
+    const { name, number } = req.body;
+
+    const result = await pool.query(
+      "INSERT INTO contacts (name, number, user_id) VALUES ($1, $2, $3) RETURNING id, name, number",
+      [name, number, req.user.id]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.delete("/contacts/:id", auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      "DELETE FROM contacts WHERE id = $1 AND user_id = $2 RETURNING id",
+      [req.params.id, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Contact not found!" });
+    }
+
+    res.json({ id: req.params.id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post("/users/logout", (req, res) => {
+  res.json({ message: "Logged out successfully!" });
+});
+
+const PORT = process.env.PORT || 3001;
+
+createTables().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Available endpoints:`);
+    console.log(`- POST   http://localhost:${PORT}/users/signup`);
+    console.log(`- POST   http://localhost:${PORT}/users/login`);
+    console.log(`- GET    http://localhost:${PORT}/users/current`);
+    console.log(`- GET    http://localhost:${PORT}/contacts`);
+    console.log(`- POST   http://localhost:${PORT}/contacts`);
+    console.log(`- DELETE http://localhost:${PORT}/contacts/:id`);
+  });
+});
