@@ -3,7 +3,10 @@ const { Pool } = require("pg");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
-require("dotenv").config();
+
+if (process.env.NODE_ENV !== 'production') {
+  require("dotenv").config();
+}
 
 const app = express();
 
