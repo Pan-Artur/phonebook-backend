@@ -13,7 +13,8 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://phonebook-frontend-beige.vercel.app'
+    'https://phonebook-frontend-beige.vercel.app',
+    'https://phonebook-frontend-beige.vercel.app/'
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
