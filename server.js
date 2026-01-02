@@ -12,7 +12,8 @@ const app = express();
 
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://phonebook-frontend-beige.vercel.app'
+  'https://phonebook-frontend-beige.vercel.app',
+  'https://phonebook-frontend-9be7bninc-arturs-projects-64cbc683.vercel.app'
 ];
 
 // Логування для debug
