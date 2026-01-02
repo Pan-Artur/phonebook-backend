@@ -215,6 +215,21 @@ app.post("/users/logout", (req, res) => {
   res.json({ message: "Logged out successfully!" });
 });
 
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'Phonebook API is running!',
+    version: '1.0.0',
+    status: 'OK'
+  });
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    database: 'connected'
+  });
+});
+
 const PORT = process.env.PORT || 3001;
 
 createTables().then(() => {
