@@ -132,30 +132,69 @@ app.post("/users/signup", async (req, res) => {
 
 app.post("/users/login", async (req, res) => {
   try {
+    console.log('=== LOGIN START ===');
+    console.log('Request body:', req.body);
+    
     const { email, password } = req.body;
+    
+    console.log('Email:', email, 'Password:', password ? '***' : 'missing');
 
+    // 1. Перевірка вхідних даних
+    if (!email || !password) {
+      console.log('Missing email or password');
+      return res.status(400).json({ message: "Email and password required!" });
+    }
+
+    console.log('Querying database...');
+    
+    // 2. Запит до бази
     const result = await pool.query(
       "SELECT id, name, email, password FROM users WHERE email = $1",
       [email]
     );
 
+    console.log('Query result - rows found:', result.rows.length);
+    
     if (result.rows.length === 0) {
+      console.log('No user found with email:', email);
       return res.status(401).json({ message: "Invalid credentials!" });
     }
 
     const user = result.rows[0];
+    console.log('User found:', user.email);
+    console.log('User password hash:', user.password ? '***' : 'null');
 
+    // 3. Перевірка пароля
+    console.log('Comparing password with bcrypt...');
+    console.log('bcrypt.compare exists:', typeof bcrypt.compare);
+    
     const isPasswordValid = await bcrypt.compare(password, user.password);
+    console.log('Password valid:', isPasswordValid);
 
     if (!isPasswordValid) {
+      console.log('Password invalid');
       return res.status(401).json({ message: "Invalid credentials!" });
     }
 
+    // 4. Перевірка JWT_SECRET
+    console.log('JWT_SECRET exists:', !!process.env.JWT_SECRET);
+    console.log('JWT_SECRET length:', process.env.JWT_SECRET?.length);
+    
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not set!');
+      return res.status(500).json({ message: "Server configuration error" });
+    }
+
+    // 5. Створення токена
+    console.log('Creating JWT token...');
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
+
+    console.log('Token created:', token ? '***' : 'null');
+    console.log('=== LOGIN SUCCESS ===');
 
     res.json({
       user: {
@@ -165,7 +204,16 @@ app.post("/users/login", async (req, res) => {
       token,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('=== LOGIN ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('Error name:', error.name);
+    console.error('Full error:', error);
+    
+    res.status(500).json({ 
+      message: "Internal server error",
+      error: error.message 
+    });
   }
 });
 
