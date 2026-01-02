@@ -10,34 +10,27 @@ if (process.env.NODE_ENV !== "production") {
 
 const app = express();
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
 
-// app.use((req, res, next) => {
-//   const origin = req.headers.origin;
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+  );
 
-//   res.setHeader("Access-Control-Allow-Origin", origin);
-//   res.setHeader("Access-Control-Allow-Credentials", "true");
-//   res.setHeader(
-//     "Access-Control-Allow-Methods",
-//     "GET, POST, PUT, DELETE, OPTIONS"
-//   );
-//   res.setHeader(
-//     "Access-Control-Allow-Headers",
-//     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-//   );
+  if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS preflight request");
+    return res.status(200).end();
+  }
 
-//   if (req.method === "OPTIONS") {
-//     console.log("Handling OPTIONS preflight request");
-//     return res.status(200).end();
-//   }
-
-//   next();
-// });
+  next();
+});
 
 app.use(express.json());
 
