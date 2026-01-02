@@ -10,18 +10,37 @@ if (process.env.NODE_ENV !== 'production') {
 
 const app = express();
 
-app.options("*", cors());
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://phonebook-frontend-beige.vercel.app'
+];
 
-app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://phonebook-frontend-beige.vercel.app'
-  ],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  optionsSuccessStatus: 200
-}));
+// Логування для debug
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+  next();
+});
+
+// CORS middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS preflight request');
+    return res.status(200).end(); // Важливо: 200, не 204!
+  }
+  
+  next();
+});
 
 app.use(express.json());
 
