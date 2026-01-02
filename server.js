@@ -8,7 +8,10 @@ require("dotenv").config();
 const app = express();
 
 app.use(cors({
-  origin: true,
+  origin: [
+    'http://localhost:3000',
+    'https://phonebook-frontend-beige.vercel.app'
+  ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"]
@@ -16,15 +19,26 @@ app.use(cors({
 
 app.use(express.json());
 
-const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'phonebook',
-  user: 'phonebook_user',
-  password: 'password123',
-  ssl: false,
-  connectionTimeoutMillis: 10000,
-});
+let poolConfig;
+
+if (process.env.DATABASE_URL) {
+  poolConfig = {
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
+  };
+} else {
+  poolConfig = {
+    host: 'localhost',
+    port: 5432,
+    database: 'phonebook',
+    user: 'phonebook_user',
+    password: 'password123'
+  };
+}
+
+const pool = new Pool(poolConfig);
 
 async function createTables() {
   try {
