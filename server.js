@@ -146,14 +146,9 @@ app.post("/users/signup", async (req, res) => {
 
 app.post("/users/login", async (req, res) => {
   try {
-    console.log("Request body:", req.body);
-
     const { email, password } = req.body;
 
-    console.log("Email:", email, "Password:", password ? "***" : "missing");
-
     if (!email || !password) {
-      console.log("Missing email or password");
       return res.status(400).json({ message: "Email and password required!" });
     }
 
@@ -163,30 +158,18 @@ app.post("/users/login", async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      console.log("No user found with email:", email);
       return res.status(401).json({ message: "Invalid credentials!" });
     }
 
     const user = result.rows[0];
-    console.log("User found:", user.email);
-    console.log("User password hash:", user.password ? "***" : "null");
-
-    console.log("Comparing password with bcrypt...");
-    console.log("bcrypt.compare exists:", typeof bcrypt.compare);
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    console.log("Password valid:", isPasswordValid);
 
     if (!isPasswordValid) {
-      console.log("Password invalid");
       return res.status(401).json({ message: "Invalid credentials!" });
     }
 
-    console.log("JWT_SECRET exists:", !!process.env.JWT_SECRET);
-    console.log("JWT_SECRET length:", process.env.JWT_SECRET?.length);
-
     if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET is not set!");
       return res.status(500).json({ message: "Server configuration error" });
     }
 
@@ -205,8 +188,7 @@ app.post("/users/login", async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
-      message: "Internal server error",
-      error: error.message,
+      message: error.message,
     });
   }
 });
