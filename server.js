@@ -10,27 +10,34 @@ if (process.env.NODE_ENV !== "production") {
 
 const app = express();
 
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3001',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
-  res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS"
-  );
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Origin, X-Requested-With, Content-Type, Accept, Authorization"
-  );
+// app.use((req, res, next) => {
+//   const origin = req.headers.origin;
 
-  if (req.method === "OPTIONS") {
-    console.log("Handling OPTIONS preflight request");
-    return res.status(200).end();
-  }
+//   res.setHeader("Access-Control-Allow-Origin", origin);
+//   res.setHeader("Access-Control-Allow-Credentials", "true");
+//   res.setHeader(
+//     "Access-Control-Allow-Methods",
+//     "GET, POST, PUT, DELETE, OPTIONS"
+//   );
+//   res.setHeader(
+//     "Access-Control-Allow-Headers",
+//     "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+//   );
 
-  next();
-});
+//   if (req.method === "OPTIONS") {
+//     console.log("Handling OPTIONS preflight request");
+//     return res.status(200).end();
+//   }
+
+//   next();
+// });
 
 app.use(express.json());
 
