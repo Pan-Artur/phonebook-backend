@@ -10,15 +10,17 @@ if (process.env.NODE_ENV !== 'production') {
 
 const app = express();
 
+app.options("*", cors());
+
 app.use(cors({
   origin: [
     'http://localhost:3000',
-    'https://phonebook-frontend-beige.vercel.app',
-    'https://phonebook-frontend-beige.vercel.app/'
+    'https://phonebook-frontend-beige.vercel.app'
   ],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 200
 }));
 
 app.use(express.json());
